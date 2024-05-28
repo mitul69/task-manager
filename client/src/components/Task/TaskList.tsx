@@ -1,56 +1,106 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from 'store';
-import { addTask, updateTask, deleteTask } from 'store/slices/taskSlice';
+import { AppDispatch, RootState } from 'store';
+import { fetchTasks, updateTask, Task, setShowDialog } from 'store/slices/taskSlice';
+import { Button, Container, Row, Col, Spinner, Alert } from 'react-bootstrap';
+import { DragDropContext } from 'react-beautiful-dnd';
+import TaskForm from './TaskForm';
+import Column from './Column';
 
+
+const columns = [{
+  key: "toDo",
+  label: "To Do"
+},
+{
+  key: "inProgress",
+  label: "In Progress"
+},
+{
+  key: "done",
+  label: "Done"
+}
+]
 const TaskList: React.FC = () => {
-  const tasks = useSelector((state: RootState) => state.tasks.tasks);
-  const dispatch = useDispatch();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'To Do' | 'In Progress' | 'Done'>('To Do');
+  const { tasks, operation, error } = useSelector((state: RootState) => state.tasks);
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleAddTask = () => {
-    const newTask = {
-      id: tasks.length + 1,
-      title,
-      description,
-      status
-    };
-    dispatch(addTask(newTask));
+
+  useEffect(() => {
+    dispatch(fetchTasks());
+  }, [dispatch]);
+
+
+  const grouppedTask: any = useMemo(() => {
+
+    const taskList: {
+      "toDo": Task[],
+      "inProgress": Task[],
+      "done": Task[],
+    } = {
+      "toDo": [],
+      "inProgress": [],
+      "done": [],
+    }
+
+    tasks.forEach((task: Task) => {
+      if (task.status === "To Do") {
+        taskList.toDo.push(task)
+      } else if (task.status === "In Progress") {
+        taskList.inProgress.push(task)
+      } else {
+        taskList.done.push(task)
+      }
+    });
+    return taskList;
+  }, [tasks])
+
+
+  const toggelDialog = () => {
+    dispatch(setShowDialog(true))
+  }
+
+  const onDragEnd = (result: any) => {
+    const { destination, source } = result;
+
+    if (!destination) {
+      return;
+    }
+
+    if (
+      destination.droppableId === source.droppableId) {
+      return;
+    }
+    let _task = { ...grouppedTask[source.droppableId][source.index] };
+    if (destination.droppableId === "toDo") {
+      _task.status = "To Do";
+    } else if (destination.droppableId === "inProgress") {
+      _task.status = "In Progress";
+    } else {
+      _task.status = "Done";
+    }
+    dispatch(updateTask(_task))
   };
 
   return (
-    <div>
-      <h1>Task Management</h1>
-      <input
-        type="text"
-        placeholder="Title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-      />
-      <select value={status} onChange={(e) => setStatus(e.target.value as 'To Do' | 'In Progress' | 'Done')}>
-        <option value="To Do">To Do</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Done">Done</option>
-      </select>
-      <button onClick={handleAddTask}>Add Task</button>
-      <ul>
-        {tasks.map((task : any) => (
-          <li key={task.id}>
-            <strong>{task.title}</strong>: {task.description} - {task.status}
-            <button onClick={() => dispatch(deleteTask(task.id))}>Delete</button>
-            <button onClick={() => dispatch(updateTask({ ...task, status: 'Done' }))}>Mark as Done</button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <Container>
+      <h1 className="mt-4">Task Management</h1>
+      {operation === "list" && <Spinner animation="border" />}
+      {error && <Alert variant="danger">{error}</Alert>}
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="board">
+          <Row>
+            {columns.map((column) => {
+              return <Col>
+                <Column key={column.key} column={column} tasks={grouppedTask[column.key] || []} />
+              </Col>
+            })}
+          </Row>
+        </div>
+      </DragDropContext>
+      <TaskForm />
+      <Button className="add-task-button" onClick={toggelDialog}>+</Button>
+    </Container>
   );
 };
 

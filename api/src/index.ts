@@ -1,6 +1,9 @@
 // src/index.ts
 import express from 'express';
 import bodyParser from 'body-parser';
+import cors from "cors";
+
+
 import sequelize from './config/database';
 import taskRoutes from './routes/taskRoutes';
 
@@ -8,6 +11,8 @@ import taskRoutes from './routes/taskRoutes';
 const app = express();
 const port = process.env.PORT || 5001;
 
+app.options('*', cors())
+app.use(cors())
 app.use(bodyParser.json());
 
 // Connect to the database
