@@ -1,8 +1,9 @@
 import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
-import { Button } from 'react-bootstrap';
+import { Button, Card, Col, Row } from 'react-bootstrap';
 import { useDispatch } from 'react-redux';
-import { Task, setTask } from 'store/slices/taskSlice';
+import { AppDispatch } from 'store';
+import { Task, deleteTask, setTask } from 'store/slices/taskSlice';
 
 interface TaskItemProps {
     task: Task,
@@ -11,22 +12,29 @@ interface TaskItemProps {
 const TaskItem = ({ task, index }: TaskItemProps) => {
 
 
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const handleEdit = () => {
         dispatch(setTask(task))
+    }
+    const handleDelete = () => {
+        dispatch(deleteTask(task.id))
     }
     return (
         <Draggable draggableId={`${task.id}`} index={index}>
             {(provided) => (
-                <div
-                    className="card"
+                <Card className='task-item'
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
-                    ref={provided.innerRef}
-                >
-                    {task.title}
-                    <Button onClick={handleEdit}> Edit</Button>
-                </div>
+                    ref={provided.innerRef}>
+                    <Card.Body>
+                        <Card.Title>{task.title}</Card.Title>
+                        <Card.Text>
+                           {task.description}
+                        </Card.Text>
+                        <Card.Link onClick={handleEdit}>Edit</Card.Link>
+                        <Card.Link onClick={handleDelete}>Delete</Card.Link>
+                    </Card.Body>
+                </Card>
             )}
         </Draggable>
     );
